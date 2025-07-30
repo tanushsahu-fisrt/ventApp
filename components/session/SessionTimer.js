@@ -1,15 +1,14 @@
-import { View, Text, StyleSheet } from "react-native"
-import Timer from "../ui/Timer"
+import React from "react"
+import { View, Text, StyleSheet, Platform } from "react-native"
+import { getTimeColor, formatTime } from "../../utils/helper"
+import { theme } from "../../config/theme"
 
 const SessionTimer = ({ sessionTime, timeRemaining, plan }) => {
   return (
     <View style={styles.container}>
-      <Timer seconds={sessionTime} variant="large" />
-      <Text style={styles.planText}>{plan} Session</Text>
-
-      <View style={styles.timeRemainingContainer}>
-        <Timer seconds={timeRemaining} label="Time Remaining" showWarning={true} />
-      </View>
+      <Text style={styles.planText}>{plan}</Text>
+      <Text style={[styles.timeText, { color: getTimeColor(timeRemaining) }]}>{formatTime(timeRemaining)}</Text>
+      <Text style={styles.sessionText}>Session: {formatTime(sessionTime)}</Text>
     </View>
   )
 }
@@ -17,20 +16,24 @@ const SessionTimer = ({ sessionTime, timeRemaining, plan }) => {
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-    marginVertical: 30,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
   },
   planText: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 16,
-    textTransform: "capitalize",
-    marginBottom: 20,
+    ...theme.typography.body,
+    color: theme.colors.text.secondary,
+    marginBottom: theme.spacing.sm,
   },
-  timeRemainingContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 15,
+  timeText: {
+    fontSize: 48,
+    fontWeight: "bold",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    marginBottom: 5,
+  },
+  sessionText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
   },
 })
 
-export default SessionTimer
+export default React.memo(SessionTimer)

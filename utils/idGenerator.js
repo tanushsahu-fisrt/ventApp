@@ -1,46 +1,93 @@
+import 'react-native-get-random-values';
+import { v4 as uuidv4 } from 'uuid';
+import CryptoJS from 'crypto-js';
+
 class IdGenerator {
-  // Generate UUID v4 (RFC4122 compliant - basic version)
   static generateUUID() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
+    try {
+      return uuidv4();
+    } catch (error) {
+      console.error('Error generating UUID:', error);
+      return this.generateFallbackId();
+    }
   }
 
-  // Generate session ID
   static generateSessionId() {
-    return `session_${Math.random().toString(36).substr(2, 12)}`;
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(8));
+      const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+      return `session_${hex}`;
+    } catch (error) {
+      console.error('Error generating session ID:', error);
+      return this.generateFallbackId('session');
+    }
   }
 
-  // Generate room name
-  static generateRoomName() {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substr(2, 6);
-    return `ventbox-${timestamp}-${random}`;
+  static generateChannelName() {
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(6));
+      const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+      const timestamp = Date.now().toString(36);
+      return `ventbox_${timestamp}_${hex}`;
+    } catch (error) {
+      console.error('Error generating channel name:', error);
+      return this.generateFallbackId('ventbox');
+    }
   }
 
-  // Generate user ID
   static generateUserId() {
-    return `user_${Math.random().toString(36).substr(2, 16)}`;
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(12));
+      const hex = Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+      return `user_${hex}`;
+    } catch (error) {
+      console.error('Error generating user ID:', error);
+      return this.generateFallbackId('user');
+    }
   }
 
-  // Generate fallback ID
-  static generateFallbackId(prefix = "id") {
+  static generateToken(length = 32) {
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(length));
+      return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (error) {
+      console.error('Error generating token:', error);
+      return this.generateFallbackId('token');
+    }
+  }
+
+  static generateFallbackId(prefix = 'id') {
     const timestamp = Date.now().toString(36);
     const random = Math.random().toString(36).substr(2, 9);
     return `${prefix}_${timestamp}_${random}`;
   }
 
-  // Generate short ID (for display)
   static generateShortId(length = 8) {
-    return Math.random().toString(36).substr(2, length).toUpperCase();
+    try {
+      const bytes = crypto.getRandomValues(new Uint8Array(Math.ceil(length / 2)));
+      return Array.from(bytes)
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('')
+        .substring(0, length)
+        .toUpperCase();
+    } catch (error) {
+      console.error('Error generating short ID:', error);
+      return Math.random().toString(36).substr(2, length).toUpperCase();
+    }
   }
 
-  // Basic UUID format validator
   static isValidUUID(uuid) {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return uuidRegex.test(uuid);
+  }
+
+  static generateHash(input) {
+    try {
+      return CryptoJS.SHA256(input).toString(CryptoJS.enc.Hex);
+    } catch (error) {
+      console.error('Error generating hash:', error);
+      return null;
+    }
   }
 }
 

@@ -1,63 +1,111 @@
-import { View, TouchableOpacity, Text, StyleSheet } from "react-native"
+import React from "react"
+import { View, StyleSheet, TouchableOpacity, Text } from "react-native"
+import Ionicons from "react-native-vector-icons/Ionicons"
+import { theme } from "../../config/theme"
 
-const VoiceControls = ({ muted, onToggleMute, onEndCall, disabled = false }) => {
+const VoiceControls = ({ muted, speakerEnabled, onToggleMute, onToggleSpeaker, onEndCall, disabled = false }) => {
+  const ControlButton = ({ icon, onPress, active, variant = "default", label }) => (
+    <View style={styles.controlContainer}>
+      <TouchableOpacity
+        style={[
+          styles.controlButton,
+          variant === "danger" && styles.dangerButton,
+          active && styles.activeButton,
+          disabled && styles.disabledButton,
+        ]}
+        onPress={onPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+        <Ionicons
+          name={icon}
+          size={28}
+          color={disabled ? theme.colors.text.muted : variant === "danger" ? "#fff" : active ? "#000" : "#fff"}
+        />
+      </TouchableOpacity>
+      <Text style={styles.controlLabel}>{label}</Text>
+    </View>
+  )
 
-  
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={[styles.controlButton, muted && styles.mutedButton]}
-        onPress={onToggleMute}
-        disabled={disabled}
-      >
-        <Text style={styles.controlButtonText}>{muted ? "🔇" : "🎤"}</Text>
-        <Text style={styles.controlLabel}>{muted ? "Unmute" : "Mute"}</Text>
-      </TouchableOpacity>
+      <View style={styles.controlsRow}>
+        <ControlButton
+          icon={muted ? "mic-off" : "mic"}
+          onPress={onToggleMute}
+          active={!muted}
+          label={muted ? "Unmute" : "Mute"}
+        />
 
-      <TouchableOpacity style={[styles.controlButton, styles.endCallButton]} onPress={onEndCall}>
-        <Text style={styles.controlButtonText}>📞</Text>
-        <Text style={styles.controlLabel}>End Call</Text>
-      </TouchableOpacity>
+        <ControlButton icon="call" onPress={onEndCall} variant="danger" label="End Call" />
+
+        <ControlButton
+          icon={speakerEnabled ? "volume-high" : "volume-low"}
+          onPress={onToggleSpeaker}
+          active={speakerEnabled}
+          label="Speaker"
+        />
+      </View>
+
+      <Text style={styles.instructionText}>Tap the microphone to mute/unmute yourself</Text>
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "70%",
-    marginBottom: 30,
-  },
-  controlButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    paddingHorizontal: theme.spacing.lg,
   },
-  mutedButton: {
-    backgroundColor: "rgba(255, 107, 107, 0.8)",
+  controlsRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 300,
+    marginBottom: theme.spacing.xl,
   },
-  endCallButton: {
-    backgroundColor: "#ff6b6b",
+  controlContainer: {
+    alignItems: "center",
   },
-  controlButtonText: {
-    fontSize: 28,
-    marginBottom: 4,
+  controlButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: theme.colors.overlay,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: theme.spacing.sm,
+    borderWidth: 2,
+    borderColor: theme.colors.overlayStrong,
+    ...theme.shadows.medium,
+  },
+  activeButton: {
+    backgroundColor: theme.colors.secondary,
+    borderColor: theme.colors.secondary,
+  },
+  dangerButton: {
+    backgroundColor: theme.colors.error,
+    borderColor: theme.colors.error,
+  },
+  disabledButton: {
+    opacity: 0.5,
   },
   controlLabel: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "600",
+    ...theme.typography.small,
+    color: theme.colors.text.secondary,
     textAlign: "center",
+  },
+  instructionText: {
+    ...theme.typography.caption,
+    color: theme.colors.text.tertiary,
+    textAlign: "center",
+    paddingHorizontal: theme.spacing.xl,
+    lineHeight: 20,
   },
 })
 
-export default VoiceControls
+export default React.memo(VoiceControls)

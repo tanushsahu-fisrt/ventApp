@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,49 +10,55 @@ import {
   Platform,
   TouchableWithoutFeedback,
   Keyboard,
-} from "react-native"
-import { useNavigation } from "@react-navigation/native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import GradientContainer from "../../components/ui/GradientContainer"
-import StatusBar from "../../components/ui/StatusBar"
-import Button from "../../components/ui/Button"
-import { useAuth } from "../../context/AuthContext"
+} from "react-native";
+import { useNavigation, useRoute } from "@react-navigation/native"; 
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import GradientContainer from "../../components/ui/GradientContainer"; 
+import StatusBar from "../../components/ui/StatusBar"; 
+import Button from "../../components/ui/Button"; 
+import { useAuth } from "../../context/AuthContext";
+import useMatching from "../../hooks/useMatching";
+import { validateVentText } from "../../utils/helper";
+import { VALIDATION } from "../../utils/constants"; 
 
-export default function VentSubmitted() {
+export default function VentSubmittedScreen() {
+  const [ventText, setVentText] = useState("");
+  const { userInfo } = useAuth();
+  const { isMatching, startMatching } = useMatching();
+  const insets = useSafeAreaInsets();
+  const textInputRef = useRef(null);
 
-  const navigation = useNavigation()
+  
+  const route = useRoute(); 
+  const navigation = useNavigation(); 
 
-  const [ventText, setVentText] = useState("")
-  const [submitting, setSubmitting] = useState(false)
-  const { userInfo } = useAuth()
-  const insets = useSafeAreaInsets()
-  const textInputRef = useRef(null)
+  
+  const selectedPlan = route.params?.selectedPlan || null;
+
 
   const handleSubmitVent = async () => {
-    if (!ventText.trim()) {
-      Alert.alert("Empty Vent", "Please write something before submitting.")
-      return
+    const validation = validateVentText(ventText);
+    if (!validation.isValid) {
+      Alert.alert("Invalid Input", validation.error);
+      return;
     }
 
-    try {
-      setSubmitting(true)
-      Keyboard.dismiss()
-      await new Promise((resolve) => setTimeout(resolve, 2000))
-      navigation.navigate("VentSubmitted", {
-        ventText: ventText.trim(),
-        userId: userInfo?.sessionId || "anonymous",
-        timestamp: new Date().toISOString(),
-      })
-    } catch (error) {
-      Alert.alert("Error", "Failed to submit your vent. Please try again.")
-    } finally {
-      setSubmitting(false)
+    if (!userInfo?.uid) {
+      Alert.alert("Error", "Please sign in to continue");
+      return;
     }
-  }
+
+    Keyboard.dismiss();
+    const success = await startMatching("venter", ventText.trim(), selectedPlan);
+
+    if (!success) {
+      Alert.alert("Error", "Failed to start matching. Please try again.");
+    }
+  };
 
   const dismissKeyboard = () => {
-    Keyboard.dismiss()
-  }
+    Keyboard.dismiss();
+  };
 
   return (
     <TouchableWithoutFeedback onPress={dismissKeyboard} accessible={false}>
@@ -82,36 +88,54 @@ export default function VentSubmitted() {
                     ref={textInputRef}
                     style={styles.textInput}
                     placeholder="I feel like..."
-                    placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                    placeholderTextColor="rgba(255, 255, 255, 0.4)"
                     value={ventText}
                     onChangeText={setVentText}
                     multiline
-                    maxLength={500}
+                    maxLength={VALIDATION.VENT_TEXT.MAX_LENGTH}
                     textAlignVertical="top"
                     returnKeyType="default"
                     blurOnSubmit={false}
                     scrollEnabled={true}
                   />
-                  <Text style={styles.characterCount}>{ventText.length}/500</Text>
+                  <Text style={styles.characterCount}>
+                    {ventText.length}/{VALIDATION.VENT_TEXT.MAX_LENGTH}
+                  </Text>
                 </View>
 
                 <Text style={styles.helperText}>Share your thoughts anonymously</Text>
-                <Text style={styles.secureText}>🔐 Secured with Expo Crypto</Text>
+
+                {isMatching && (
+                  <View style={styles.matchingContainer}>
+                    <Text style={styles.matchingText}>🔍 Finding a listener...</Text>
+                    <Text style={styles.matchingSubtext}>This may take a few moments</Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.buttonContainer}>
                 <Button
-                  title={submitting ? "Submitting..." : "Submit Vent"}
+                  title={isMatching ? "Finding Listener..." : "Submit Vent"}
                   onPress={handleSubmitVent}
-                  disabled={!ventText.trim() || submitting}
+                  disabled={!ventText.trim() || isMatching}
+                  loading={isMatching}
                 />
+
+                {!isMatching && (
+                  <Button
+                    title="Back to Dashboard"
+                    onPress={() => navigation.navigate("DashboardScreen")} 
+                    variant="outline"
+                    style={styles.backButton}
+                  />
+                )}
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
         </GradientContainer>
       </View>
     </TouchableWithoutFeedback>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -123,14 +147,15 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 30,
+    paddingHorizontal: 32,
   },
   anonymousText: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "rgba(255, 255, 255, 0.6)",
     fontSize: 16,
+    fontWeight: "400",
     textAlign: "center",
-    marginTop: 20,
-    marginBottom: 20,
+    marginTop: 24,
+    marginBottom: 24,
   },
   mainContent: {
     flex: 1,
@@ -139,50 +164,70 @@ const styles = StyleSheet.create({
     minHeight: 400,
   },
   title: {
-    color: "white",
+    color: "#ffffff",
     fontSize: 36,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 40,
+    marginBottom: 32,
     lineHeight: 44,
   },
   inputContainer: {
     width: "100%",
-    marginBottom: 30,
+    marginBottom: 32,
     position: "relative",
   },
   textInput: {
     borderWidth: 2,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    borderRadius: 15,
-    padding: 20,
-    color: "white",
+    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderRadius: 12,
+    padding: 24,
+    color: "#ffffff",
     fontSize: 16,
+    fontWeight: "400",
     minHeight: 120,
     maxHeight: 200,
     textAlignVertical: "top",
     backgroundColor: "rgba(255, 255, 255, 0.05)",
   },
   characterCount: {
-    color: "rgba(255, 255, 255, 0.5)",
+    color: "rgba(255, 255, 255, 0.4)",
     fontSize: 12,
+    fontWeight: "400",
     textAlign: "right",
     marginTop: 5,
   },
   helperText: {
-    color: "rgba(255, 255, 255, 0.7)",
+    color: "rgba(255, 255, 255, 0.6)",
     fontSize: 16,
+    fontWeight: "400",
     textAlign: "center",
-    marginBottom: 10,
+    marginBottom: 24,
   },
-  secureText: {
-    color: "#4ade80",
-    fontSize: 14,
-    textAlign: "center",
+  matchingContainer: {
+    backgroundColor: "rgba(79, 70, 229, 0.2)",
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#4f46e5",
+    alignItems: "center",
+    marginTop: 24,
+  },
+  matchingText: {
+    color: "#4f46e5",
+    fontSize: 16,
     fontWeight: "600",
+    marginBottom: 5,
+  },
+  matchingSubtext: {
+    color: "rgba(79, 70, 229, 0.8)",
+    fontSize: 14,
+    fontWeight: "400",
   },
   buttonContainer: {
-    paddingBottom: 40,
-    paddingTop: 20,
+    paddingBottom: 48,
+    paddingTop: 24,
   },
-})
+  backButton: {
+    marginTop: 16,
+  },
+});

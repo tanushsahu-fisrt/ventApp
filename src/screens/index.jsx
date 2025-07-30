@@ -1,157 +1,235 @@
-import { useState } from "react"
-import { View, Text, StyleSheet } from "react-native"
-import { useNavigation } from "@react-navigation/native";
-import GradientContainer from "../../components/ui/GradientContainer"
-import StatusBar from "../../components/ui/StatusBar"
-import Button from "../../components/ui/Button"
-import Avatar from "../../components/ui/Avatar"
-import { useAuth } from "../../context/AuthContext"
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Alert } from 'react-native';
+
+import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import GradientContainer from '../../components/ui/GradientContainer';
+import StatusBar from '../../components/ui/StatusBar';
+import Button from '../../components/ui/Button';
+import Avatar from '../../components/ui/Avatar';
+import { useAuth } from '../../context/AuthContext';
+
 
 export default function WelcomeScreen() {
+  const [signingIn, setSigningIn] = useState(false);
+  const { user, userInfo, loading, signInAnonymous, error } = useAuth();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation(); 
 
-  const navigation = useNavigation();
+  useEffect(() => {
   
-
-  const [loading, setLoading] = useState(false)
-  const [anonymousLoading, setAnonymousLoading] = useState(false)
-  
-  const { signInAnonymous , signInWithGoogle, userInfo } = useAuth()
-
-  const handleAnonymousSignIn = async () => {
-  if (anonymousLoading) return;
-  
-  setAnonymousLoading(true)
-  
-  try {
-    const result = await signInAnonymous()
-    navigation.replace("Dashboard");
-  } catch (error) {
-    console.error("=== ANONYMOUS SIGN-IN ERROR ===")
-    console.error("Error object:", error)
-    console.error("Error message:", error?.message)
-    console.error("Error code:", error?.code)
-  } finally {
-    setAnonymousLoading(false)
-  }
-}
-
-  const handleGoogleSignIn = async () => {
-    setLoading(true)
-    try {
-      await signInWithGoogle()
-       navigation.navigate("Vent");
-    } catch (error) {
-      // Error already handled in context
-    } finally {
-      setLoading(false)
+    if (!loading && user && userInfo) {
+      
+      navigation.replace('DashboardScreen'); 
     }
+  }, [loading, user, userInfo, navigation]); 
+
+  const handleGetStarted = async () => {
+    if (signingIn) return;
+
+    try {
+      setSigningIn(true);
+
+      if (user && userInfo) {
+       
+        navigation.replace('DashboardScreen');
+        return;
+      }
+
+      const signedInUser = await signInAnonymous();
+      if (signedInUser) {
+        // Replaced router.replace with navigation.replace
+        // A small timeout can sometimes help ensure navigation is smooth after auth state updates
+        setTimeout(() => navigation.replace('DashboardScreen'), 500);
+      }
+    } catch (error) {
+      Alert.alert('Sign In Error', `Failed to sign in: ${error.message}`, [
+        { text: 'Retry', onPress: handleGetStarted },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <GradientContainer>
+        <StatusBar />
+        <View style={styles.loadingContainer}>
+          <Avatar emoji="💭" size={120} />
+          <Text style={styles.loadingText}>Loading VentBox...</Text>
+        </View>
+      </GradientContainer>
+    );
+  }
+
+  // Display error screen if there's an error and no user is signed in
+  if (error && !user) {
+    return (
+      <GradientContainer>
+        <StatusBar />
+        <View style={styles.errorContainer}>
+          <Avatar emoji="⚠️" size={80} />
+          <Text style={styles.errorTitle}>Connection Error</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <Button
+            title="Retry"
+            onPress={handleGetStarted}
+            style={styles.retryButton}
+          />
+        </View>
+      </GradientContainer>
+    );
   }
 
   return (
     <GradientContainer>
       <StatusBar />
-
-      <View style={styles.content}>
-        <Text style={styles.anonymousText}>{userInfo?.isAnonymous ? "You are anonymous" : "Welcome to Vent Box"}</Text>
-
-        <View style={styles.mainContent}>
-          <Text style={styles.title}>Vent Box</Text>
-          <Text style={styles.subtitle}>Share your thoughts{"\n"}anonymously</Text>
-
-          <View style={styles.avatarContainer}>
-            <Avatar emoji="💭" />
+      <View style={[styles.container, { paddingTop: insets.top }]}>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Avatar emoji="💭" size={120} />
+            <Text style={styles.title}>VentBox</Text>
+            <Text style={styles.subtitle}>Anonymous venting made safe</Text>
           </View>
 
-          <View style={styles.techStack}>
-            <Text style={styles.techTitle}>🚀 Built with:</Text>
-            <Text style={styles.techItem}>📱 Expo Go Compatible</Text>
-            <Text style={styles.techItem}>🔐 Expo Crypto Security</Text>
-            <Text style={styles.techItem}>🔥 Firebase Auth</Text>
-            <Text style={styles.techItem}>⚡ React Native</Text>
+          <View style={styles.features}>
+            <FeatureItem emoji="🔒" text="Completely Anonymous" />
+            <FeatureItem emoji="👂" text="Trained Listeners" />
+            <FeatureItem emoji="🎯" text="Instant Matching" />
           </View>
+
+          <Text style={styles.description}>
+            Sometimes you just need someone to listen. VentBox connects you with
+            caring listeners in a safe, anonymous environment.
+          </Text>
         </View>
 
-        <View style={styles.buttonContainer}>
+        <View style={styles.footer}>
           <Button
-            title={loading ? "Signing in..." : "🔍 Continue with Google"}
-            onPress={handleGoogleSignIn}
-            variant="secondary"
-            disabled={loading}
+            title={signingIn ? 'Signing In...' : 'Get Started'}
+            onPress={handleGetStarted}
+            disabled={signingIn}
+            loading={signingIn}
+            style={styles.getStartedButton}
           />
-
-          <Button
-            title={anonymousLoading ? "Signing in..." : "👤 Continue Anonymously"}
-            onPress={handleAnonymousSignIn}
-            disabled={anonymousLoading}
-          />
-
-          <Text style={styles.privacyText}>Anonymous mode: No personal data is collected or stored</Text>
+          <Text style={styles.disclaimer}>
+            By continuing, you agree to our Terms of Service and Privacy Policy
+          </Text>
         </View>
       </View>
     </GradientContainer>
-  )
+  );
 }
 
+// Using React.memo for performance optimization if FeatureItem doesn't re-render often
+const FeatureItem = React.memo(({ emoji, text }) => (
+  <View style={styles.feature}>
+    <Text style={styles.featureEmoji}>{emoji}</Text>
+    <Text style={styles.featureText}>{text}</Text>
+  </View>
+));
+
 const styles = StyleSheet.create({
-  content: {
+  container: {
     flex: 1,
-    paddingHorizontal: 30,
+    paddingHorizontal: 32,
   },
-  anonymousText: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 16,
-    textAlign: "center",
-    marginTop: 20,
-  },
-  mainContent: {
+  loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    color: "white",
-    fontSize: 48,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  subtitle: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 18,
-    textAlign: "center",
-    lineHeight: 24,
-    marginBottom: 40,
-  },
-  avatarContainer: {
-    alignItems: "center",
-    marginBottom: 30,
-  },
-  techStack: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 15,
-    borderRadius: 15,
-    alignItems: "center",
-  },
-  techTitle: {
-    color: "#4ade80",
+  loadingText: {
+    color: "#ffffff",
     fontSize: 16,
+    fontWeight: "400",
+    marginTop: 24,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  errorTitle: {
+    color: "#ffffff",
+    fontSize: 24,
     fontWeight: "bold",
+    marginTop: 24,
     marginBottom: 8,
   },
-  techItem: {
+  errorText: {
+    color: "#ef4444",
+    fontSize: 16,
+    fontWeight: "400",
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  retryButton: {
+    minWidth: 120,
+  },
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: 48,
+  },
+  title: {
+    fontSize: 48,
+    fontWeight: "bold",
+    color: "#ffffff",
+    marginTop: 24,
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    fontWeight: "400",
     color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 14,
-    marginBottom: 4,
+    textAlign: 'center',
   },
-  buttonContainer: {
-    paddingBottom: 40,
-    gap: 15,
+  features: {
+    marginBottom: 32,
   },
-  privacyText: {
+  feature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 24,
+  },
+  featureEmoji: {
+    fontSize: 24,
+    marginRight: 16,
+  },
+  featureText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#ffffff",
+  },
+  description: {
+    fontSize: 16,
+    fontWeight: "400",
     color: "rgba(255, 255, 255, 0.6)",
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 10,
-    fontStyle: "italic",
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 8,
   },
-})
+  footer: {
+    paddingBottom: 48,
+  },
+  getStartedButton: {
+    marginBottom: 24,
+  },
+  disclaimer: {
+    fontSize: 12,
+    fontWeight: "400",
+    color: "rgba(255, 255, 255, 0.4)",
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+});

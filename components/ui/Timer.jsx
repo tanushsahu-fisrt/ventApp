@@ -1,3 +1,4 @@
+import React from "react"
 import { View, Text, StyleSheet } from "react-native"
 
 const Timer = ({ seconds, label, variant = "default", showWarning = false }) => {
@@ -9,8 +10,8 @@ const Timer = ({ seconds, label, variant = "default", showWarning = false }) => 
 
   const getTimerColor = () => {
     if (showWarning) {
-      if (seconds <= 60) return "#ff4444" // Red for last minute
-      if (seconds <= 300) return "#ffa726" // Orange for last 5 minutes
+      if (seconds <= 60) return "#ff4444" 
+      if (seconds <= 300) return "#ffa726" 
     }
     return "white"
   }

@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, Modal, Alert } from "react-native"
 import LinearGradient from "react-native-linear-gradient"
 import Button from "../ui/Button"
-import { useAuth } from "../../../../../Users/tanush sahu/Downloads/ventApp/ventApp/context/AuthContext"
+import { useAuth } from "../../context/AuthContext"
 
 
 const AccountLinkingModal = ({ visible, onClose }) => {
