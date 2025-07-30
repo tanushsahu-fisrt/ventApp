@@ -18,7 +18,7 @@ try {
 
 import { agoraConfig, generateAgoraToken } from "../config/agora.config"
 
-// Global engine management
+
 let globalEngineInstance = null
 let globalEngineUsers = new Set()
 
@@ -33,7 +33,7 @@ export default function useAgora(channelName, isVenter) {
   const isMountedRef = useRef(true)
   const instanceId = useRef(Math.random().toString(36).substr(2, 9))
 
-  // Early return for unavailable SDK
+  
   if (!agoraSdkAvailable) {
     return {
       joined: false,
@@ -275,7 +275,7 @@ export default function useAgora(channelName, isVenter) {
     }
   }, [])
 
-  // Auto-join when channel name is provided
+ 
   useEffect(() => {
     if (!channelName || !agoraSdkAvailable) return
 

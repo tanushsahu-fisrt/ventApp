@@ -166,6 +166,16 @@ const useMatching = () => {
         return false;
       }
 
+      // For listeners, we now use the room-based system
+      if (userType === "listener") {
+        Alert.alert(
+          "Room-Based Listening", 
+          "Listeners now join specific rooms. Please use the room selection interface.",
+          [{ text: "OK" }]
+        );
+        return false;
+      }
+
       if (userType === "venter") {
         if (!ventText || ventText.trim().length < 10) {
           Alert.alert("Input Required", "Please provide a detailed description (at least 10 characters).");
@@ -209,20 +219,22 @@ const useMatching = () => {
           }
         });
 
-        // Timeout after 4 minutes
-        timeoutRef.current = setTimeout(async () => {
-          if (isMountedRef.current && matchingStatus === "searching") {
-            setMatchingStatus("failed");
+        // Timeout after 4 minutes for venters
+        if (userType === "venter") {
+          timeoutRef.current = setTimeout(async () => {
+            if (isMountedRef.current && matchingStatus === "searching") {
+              setMatchingStatus("failed");
 
-            Alert.alert("No Match Found", "We couldn't find a match right now. Please try again later.", [
-              {
-                text: "Try Again",
-                onPress: () => startMatching(userType, ventText, selectedPlan),
-              },
-              { text: "Cancel", onPress: () => stopMatching(), style: "cancel" },
-            ]);
-          }
-        }, 240000);
+              Alert.alert("No Match Found", "We couldn't find a listener right now. Please try again later.", [
+                {
+                  text: "Try Again",
+                  onPress: () => startMatching(userType, ventText, selectedPlan),
+                },
+                { text: "Cancel", onPress: () => stopMatching(), style: "cancel" },
+              ]);
+            }
+          }, 240000);
+        }
 
         return true;
       } catch (error) {

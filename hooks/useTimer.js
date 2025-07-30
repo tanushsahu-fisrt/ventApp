@@ -27,7 +27,7 @@ const useTimer = (initialDuration, onTimeUp) => {
     });
   }, [sessionTime, timeRemaining, isActive, isPaused, initialDuration]);
 
-  // Enhanced timer start with drift correction
+  
   const startTimer = useCallback(() => {
     if (isActive || !isMountedRef.current) {
       debugLog("start_timer_skipped", { 
