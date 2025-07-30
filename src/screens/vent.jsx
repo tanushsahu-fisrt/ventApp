@@ -64,7 +64,7 @@ const Vent = () => {
         startTime: null,
         allowListeners: true, // Allow people to join as listeners
         currentListeners: 0,  // Track number of listeners
-        maxListeners: 2 // Set max listeners to 2,
+        maxListeners:  1 // Set max listeners to 1,
       });
 
       const roomId = newRoomRef.id; 
@@ -77,6 +77,7 @@ const Vent = () => {
           plan,
           channelName: roomId,
           isHost: true,
+          isListener: false, 
         });
       } catch (error) {
       console.error("Error creating Firebase room:", error);

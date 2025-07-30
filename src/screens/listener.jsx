@@ -9,6 +9,7 @@ import { firestore } from "../../config/firebase.config";
 import { collection, query, where, onSnapshot, orderBy, limit } from "firebase/firestore";
 
 export default function RoomBrowserScreen() {
+  
   const navigation = useNavigation();
   const { userInfo } = useAuth();
   
@@ -64,7 +65,6 @@ export default function RoomBrowserScreen() {
               isListener: true, // New flag to indicate listener mode
               ventText: room.ventText,
               plan: room.plan,
-              roomCreator: room.createdBy
             });
           }
         }

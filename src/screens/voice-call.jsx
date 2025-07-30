@@ -7,6 +7,7 @@ import SessionTimer from "../../components/session/SessionTimer";
 import ConnectionStatus from "../../components/session/ConnectionStatus";
 import VoiceControls from "../../components/session/VoiceControls";
 import useTimer from "../../hooks/useTimer";
+import { getAuth } from "firebase/auth"
 import { firestore } from "../../config/firebase.config";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 
@@ -23,7 +24,7 @@ export default function VoiceCallScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   
-  const { ventText, plan, channelName, isHost } = route.params;
+  const { ventText, plan, channelName, isHost , isListener } = route.params;
 
   const [isJoined, setIsJoined] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -133,7 +134,7 @@ export default function VoiceCallScreen() {
         channelProfile: ChannelProfileType.ChannelProfileCommunication,
       })
 
-      const clientRole = isHost
+      const clientRole = isListener
         ? ClientRoleType.ClientRoleBroadcaster // Listeners can speak now
         : ClientRoleType.ClientRoleBroadcaster; // Venter is always a broadcaster
 
@@ -152,6 +153,7 @@ export default function VoiceCallScreen() {
       setIsSpeakerEnabled(true)
 
       engine.current.registerEventHandler({
+
         onJoinChannelSuccess: (connection, elapsed) => {
           console.log("Agora: Join channel success", connection)
           setIsJoined(true)
@@ -177,9 +179,11 @@ export default function VoiceCallScreen() {
           }, 3000)
         },
         
-        onUserJoined: (connection, remoteUid, elapsed) => {
+        onUserJoined : async  (connection, remoteUid, elapsed) => {
           console.log("Agora: User joined", remoteUid)
-          setRemoteUserIds((prev) => {
+
+          // Update state with new remote user ID
+          setRemoteUserIds( (prev) => {
             if (!prev.includes(remoteUid)) return [...prev, remoteUid]
             return prev
           })
@@ -196,7 +200,7 @@ export default function VoiceCallScreen() {
           // Handle specific error codes
           if (err === 110) {
             console.log("Agora: Error 110 - Known false positive, ignoring...")
-            // Completely ignore error 110 as it's a known Agora SDK false positive
+            
             return
           } else if (err === 101) {
             setConnectionStatus("failed")
@@ -397,8 +401,10 @@ export default function VoiceCallScreen() {
 
   return (
     <GradientContainer>
+      
       <StatusBar />
       <SessionTimer sessionTime={sessionTime} timeRemaining={timeRemaining} plan={plan} />
+      
       <Text style={styles.ventTextDisplay}>{ventText}</Text>
       
       {/* Enhanced connection status with retry option */}

@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { View, Text, StyleSheet } from "react-native"
-import { useNavigation } from "@react-navigation/native";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native"
+import { useNavigation } from "@react-navigation/native"
 import GradientContainer from "../../components/ui/GradientContainer"
 import StatusBar from "../../components/ui/StatusBar"
 import Button from "../../components/ui/Button"
@@ -8,40 +8,32 @@ import Avatar from "../../components/ui/Avatar"
 import { useAuth } from "../../context/AuthContext"
 
 export default function WelcomeScreen() {
-
-  const navigation = useNavigation();
-  
-
+  const navigation = useNavigation()
   const [loading, setLoading] = useState(false)
   const [anonymousLoading, setAnonymousLoading] = useState(false)
-  
-  const { signInAnonymous , signInWithGoogle, userInfo } = useAuth()
+  const { signInAnonymous, signInWithGoogle, userInfo } = useAuth()
 
   const handleAnonymousSignIn = async () => {
-  if (anonymousLoading) return;
-  
-  setAnonymousLoading(true)
-  
-  try {
-    const result = await signInAnonymous()
-    navigation.replace("Dashboard");
-  } catch (error) {
-    console.error("=== ANONYMOUS SIGN-IN ERROR ===")
-    console.error("Error object:", error)
-    console.error("Error message:", error?.message)
-    console.error("Error code:", error?.code)
-  } finally {
-    setAnonymousLoading(false)
+    if (anonymousLoading) return
+    setAnonymousLoading(true)
+    try {
+      await signInAnonymous()
+      navigation.replace("Dashboard")
+    } catch (error) {
+      console.error("Anonymous Sign-in Error:", error)
+    } finally {
+      setAnonymousLoading(false)
+    }
   }
-}
 
   const handleGoogleSignIn = async () => {
+    if (loading) return
     setLoading(true)
     try {
       await signInWithGoogle()
-       navigation.navigate("Vent");
+      navigation.navigate("Vent")
     } catch (error) {
-      // Error already handled in context
+      console.error("Google Sign-in Error:", error)
     } finally {
       setLoading(false)
     }
@@ -52,22 +44,23 @@ export default function WelcomeScreen() {
       <StatusBar />
 
       <View style={styles.content}>
-        <Text style={styles.anonymousText}>{userInfo?.isAnonymous ? "You are anonymous" : "Welcome to Vent Box"}</Text>
+        <Text style={styles.welcomeText}>
+          {userInfo?.isAnonymous ? "You are anonymous" : "Welcome to Vent Box"}
+        </Text>
 
         <View style={styles.mainContent}>
-          <Text style={styles.title}>Vent Box</Text>
-          <Text style={styles.subtitle}>Share your thoughts{"\n"}anonymously</Text>
+          <Text style={styles.title}>💭 Vent Box</Text>
+          <Text style={styles.subtitle}>Share your thoughts anonymously</Text>
 
           <View style={styles.avatarContainer}>
-            <Avatar emoji="💭" />
+            <Avatar emoji="💬" />
           </View>
 
           <View style={styles.techStack}>
-            <Text style={styles.techTitle}>🚀 Built with:</Text>
-            <Text style={styles.techItem}>📱 Expo Go Compatible</Text>
-            <Text style={styles.techItem}>🔐 Expo Crypto Security</Text>
-            <Text style={styles.techItem}>🔥 Firebase Auth</Text>
-            <Text style={styles.techItem}>⚡ React Native</Text>
+            <Text style={styles.techTitle}>🚀 Built With:</Text>
+            {["📱 Expo Go", "🔐 Expo Crypto", "🔥 Firebase Auth", "⚡ React Native"].map((tech, i) => (
+              <Text key={i} style={styles.techItem}>{tech}</Text>
+            ))}
           </View>
         </View>
 
@@ -85,7 +78,9 @@ export default function WelcomeScreen() {
             disabled={anonymousLoading}
           />
 
-          <Text style={styles.privacyText}>Anonymous mode: No personal data is collected or stored</Text>
+          <Text style={styles.privacyText}>
+            No personal data is collected in Anonymous mode.
+          </Text>
         </View>
       </View>
     </GradientContainer>
@@ -95,10 +90,10 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   content: {
     flex: 1,
-    paddingHorizontal: 30,
+    paddingHorizontal: 24,
   },
-  anonymousText: {
-    color: "rgba(255, 255, 255, 0.7)",
+  welcomeText: {
+    color: "rgba(255,255,255,0.7)",
     fontSize: 16,
     textAlign: "center",
     marginTop: 20,
@@ -109,49 +104,54 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    color: "white",
-    fontSize: 48,
-    fontWeight: "bold",
+    color: "#fff",
+    fontSize: 44,
+    fontWeight: "700",
+    marginBottom: 12,
     textAlign: "center",
-    marginBottom: 20,
   },
   subtitle: {
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "rgba(255,255,255,0.85)",
     fontSize: 18,
     textAlign: "center",
+    marginBottom: 30,
     lineHeight: 24,
-    marginBottom: 40,
   },
   avatarContainer: {
-    alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 28,
   },
   techStack: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 15,
-    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    padding: 16,
+    borderRadius: 12,
     alignItems: "center",
+    width: "90%",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 5,
   },
   techTitle: {
-    color: "#4ade80",
     fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 8,
+    color: "#4ade80",
+    marginBottom: 6,
   },
   techItem: {
-    color: "rgba(255, 255, 255, 0.8)",
+    color: "rgba(255,255,255,0.85)",
     fontSize: 14,
-    marginBottom: 4,
+    marginVertical: 2,
   },
   buttonContainer: {
     paddingBottom: 40,
     gap: 15,
   },
   privacyText: {
-    color: "rgba(255, 255, 255, 0.6)",
     fontSize: 12,
     textAlign: "center",
-    marginTop: 10,
+    marginTop: 12,
+    color: "rgba(255,255,255,0.6)",
     fontStyle: "italic",
   },
 })

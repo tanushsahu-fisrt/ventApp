@@ -1,23 +1,57 @@
+// ConnectionStatus.jsx
+
 import { View, Text, StyleSheet } from "react-native"
 
-const ConnectionStatus = ({ joined, remoteUsers, timeRemaining, status, statusColor }) => {
+// Renamed 'status' and 'statusColor' props to match what's being passed from VoiceCallScreen
+// connectionStatus is passed, and ConnectionStatus component internally derives color/emoji
+const ConnectionStatus = ({ joined, remoteUsers, timeRemaining, connectionStatus, onRetry }) => {
+
   const getStatusEmoji = () => {
-    if (status === "Connected") return "✅"
-    if (status === "Waiting for listener...") return "⏳"
-    if (status === "Connection Failed") return "❌"
-    return "🔄"
-  }
+    switch (connectionStatus) { // Use the 'connectionStatus' prop
+      case "connected": return "✅";
+      case "connecting": return "🔄";
+      case "reconnecting": return "🔄";
+      case "failed": return "❌";
+      default: return "⚙️"; // Default for other states
+    }
+  };
+
+  const getStatusText = () => {
+    switch (connectionStatus) {
+      case "connected": return "Connected";
+      case "connecting": return "Connecting...";
+      case "reconnecting": return "Reconnecting...";
+      case "failed": return "Connection Failed";
+      default: return "Initializing...";
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (connectionStatus) {
+      case "connected": return "#4ade80"; // Green
+      case "connecting": return "#60a5fa"; // Blue
+      case "reconnecting": return "#fbbf24"; // Yellow/Orange
+      case "failed": return "#ef4444"; // Red
+      default: return "rgba(255, 255, 255, 0.7)"; // Greyish white
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.statusText, { color: statusColor }]}>
-        {getStatusEmoji()} {status}
-      </Text>
-      <Text style={styles.participantsText}>
-        {remoteUsers > 0 ? `${remoteUsers + 1} participants` : "Waiting for listener..."}
+
+      <Text style={[styles.statusText, { color: getStatusColor() }]}>
+        {getStatusEmoji()} {getStatusText()}
       </Text>
 
-      {timeRemaining <= 300 && timeRemaining > 0 && (
+      <Text style={styles.participantsText}>
+        {/* Corrected: Use remoteUsers.length */}
+        {remoteUsers.length > 0
+          ? `${remoteUsers.length + 1} participants` // +1 for the local user
+          : (connectionStatus === "connected" ? "Waiting for others to join..." : "No participants yet")}
+      </Text>
+
+      {/* This warning should ideally appear when the local user has successfully joined and isConnected===true */}
+      {joined && timeRemaining <= 300 && timeRemaining > 0 && (
         <View style={styles.warningContainer}>
           <Text style={styles.warningText}>
             ⚠️ Session ending in {Math.floor(timeRemaining / 60)}:{(timeRemaining % 60).toString().padStart(2, "0")}
@@ -25,9 +59,16 @@ const ConnectionStatus = ({ joined, remoteUsers, timeRemaining, status, statusCo
         </View>
       )}
 
+      {connectionStatus === "failed" && (
+        <TouchableOpacity style={styles.retryButton} onPress={onRetry}>
+          <Text style={styles.retryButtonText}>Retry Connection</Text>
+        </TouchableOpacity>
+      )}
+
       <View style={styles.expoGoIndicator}>
         <Text style={styles.expoGoText}>📱 Expo Go Compatible</Text>
       </View>
+
     </View>
   )
 }
@@ -77,6 +118,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
+  retryButton: {
+    backgroundColor: '#60a5fa', // A distinct color for retry
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginTop: 15,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
 })
 
 export default ConnectionStatus

@@ -22,7 +22,15 @@ const StacknNavigator =  () => {
       <Stack.Screen name="SessionEnd" component={SessionEnd} />
       <Stack.Screen name="Vent" component={Vent} />
       <Stack.Screen name="VentSubmitted" component={VentSubmitted} />
-      <Stack.Screen name="VoiceCall" component={VoiceCall} />
+      <Stack.Screen 
+        name="VoiceCall" 
+        component={VoiceCall} 
+        options={{ 
+        headerShown: false,
+        gestureEnabled: false, // Prevent swipe back
+        animationEnabled: false
+        }}
+     />
     </Stack.Navigator>
   );
 }
