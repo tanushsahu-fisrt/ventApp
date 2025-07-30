@@ -13,13 +13,10 @@ import firestoreService from "../../services/firestoreService";
 import { PLANS } from "../../utils/constants"; 
 
 export default function VoiceCall() {
- 
   const route = useRoute(); 
   const navigation = useNavigation(); 
 
-  
   const { ventText, plan, channelName, isHost, sessionId } = route.params || {};
-  const [connectionAttempts, setConnectionAttempts] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
 
   const isVenter = isHost === "true"; 
@@ -35,7 +32,7 @@ export default function VoiceCall() {
     if (isExiting) return;
     setIsExiting(true);
 
-    Alert.alert("Session Ended", "Your session has ended automatically due to time limit.", [
+    Alert.alert("Session Ended", "Your session has ended automatically.", [
       {
         text: "OK",
         onPress: async () => {
@@ -44,10 +41,10 @@ export default function VoiceCall() {
             try {
               await firestoreService.endSession(sessionId, sessionTime, "auto-ended");
             } catch (error) {
-              console.error("Error ending session in Firestore (auto-ended):", error);
+              console.error("Error ending session:", error);
             }
           }
-        
+          
           navigation.replace("SessionEndedScreen", { 
             sessionTime: sessionTime.toString(),
             plan,
@@ -56,7 +53,7 @@ export default function VoiceCall() {
         },
       },
     ]);
-  }, [isExiting, leaveChannel, sessionId, sessionTime, plan, navigation]); 
+  }, [isExiting, sessionTime, plan, navigation]); 
 
   const { sessionTime, timeRemaining, stopTimer } = useTimer(initialCallDuration, handleTimeUp);
   const {
@@ -71,64 +68,6 @@ export default function VoiceCall() {
     leaveChannel,
     joinChannel,
   } = useAgora(channelName, isVenter);
-
- 
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
-      handleEndCall();
-      return true; 
-    });
-
-    return () => backHandler.remove();
-  }, [handleEndCall]);
-
-  
-  useEffect(() => {
-    if (!channelName || !sessionId || typeof isHost === "undefined" || !plan) {
-      console.error("Missing required parameters:", { channelName, sessionId, isHost, plan });
-      Alert.alert("Error", "Missing call parameters. Returning to dashboard.");
-      
-      navigation.replace("DashboardScreen"); 
-    }
-  }, [channelName, sessionId, isHost, plan, navigation]); 
-
-  
-  useEffect(() => {
-    if (agoraError && !isExiting) {
-      console.error("VoiceCall Screen: Agora reported an error:", agoraError);
-
-     
-      if (connectionState === "failed" && connectionAttempts < 2) {
-        console.log(`Attempting to reconnect (attempt ${connectionAttempts + 1}/2)`);
-        setConnectionAttempts((prev) => prev + 1);
-
-        setTimeout(() => {
-          if (!isExiting) {
-            joinChannel();
-          }
-        }, 3000);
-      } else if (connectionAttempts >= 2) {
-        // Max retries reached
-        Alert.alert(
-          "Connection Failed",
-          "Unable to establish voice connection after multiple attempts. Please try again later.",
-          [
-            {
-              text: "OK",
-              onPress: () => navigation.replace("DashboardScreen"), 
-            },
-          ],
-        );
-      }
-    }
-  }, [agoraError, connectionState, connectionAttempts, joinChannel, isExiting, navigation]); 
-
-  
-  useEffect(() => {
-    if (joined) {
-      setConnectionAttempts(0);
-    }
-  }, [joined]);
 
   const handleEndCall = useCallback(async () => {
     if (isExiting) return;
@@ -151,50 +90,74 @@ export default function VoiceCall() {
               try {
                 await firestoreService.endSession(sessionId, sessionTime, "manual-ended");
               } catch (error) {
-                console.error("Error ending session in Firestore (manual-ended):", error);
+                console.error("Error ending session:", error);
               }
             }
 
-            // Changed router.replace to navigation.replace
-            navigation.replace("SessionEndedScreen", { // Use the actual screen name for SessionEndedScreen
+            navigation.replace("SessionEndedScreen", {
               sessionTime: sessionTime.toString(),
               plan,
               autoEnded: "false",
             });
           } catch (error) {
-            console.error("Error during manual call ending process:", error);
-            // Still navigate away even if there's an error
-            navigation.replace("DashboardScreen"); // Changed router.replace
+            console.error("Error during call ending:", error);
+            navigation.replace("index"); // Go back to main screen
           }
         },
       },
     ]);
-  }, [stopTimer, leaveChannel, sessionId, sessionTime, plan, isExiting, navigation]); // Added navigation to dependencies
+  }, [stopTimer, leaveChannel, sessionId, sessionTime, plan, isExiting, navigation]);
 
-  const handleRetryConnection = useCallback(() => {
-    if (isExiting) return;
-    setConnectionAttempts(0);
-    joinChannel();
-  }, [joinChannel, isExiting]);
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener("hardwareBackPress", () => {
+      handleEndCall();
+      return true; 
+    });
 
-  // Loading state while connecting
+    return () => backHandler.remove();
+  }, [handleEndCall]);
+
+  useEffect(() => {
+    if (!channelName || !sessionId || typeof isHost === "undefined" || !plan) {
+      console.error("Missing required parameters");
+      Alert.alert("Error", "Missing call parameters. Returning to home.");
+      navigation.replace("index");
+    }
+  }, [channelName, sessionId, isHost, plan, navigation]);
+
+  useEffect(() => {
+    if (agoraError && !isExiting) {
+      console.error("Agora error:", agoraError);
+      
+      Alert.alert(
+        "Connection Error",
+        agoraError,
+        [
+          {
+            text: "Retry",
+            onPress: () => joinChannel(),
+          },
+          {
+            text: "End Call",
+            onPress: () => navigation.replace("index"),
+          },
+        ],
+      );
+    }
+  }, [agoraError, isExiting, joinChannel, navigation]);
+
+  // Loading state
   if (connectionState === "connecting" || (!joined && remoteUsers.length === 0 && !agoraError)) {
     return (
       <GradientContainer>
         <StatusBar />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#fff" />
-          <Text style={styles.loadingText}>
-            {connectionState === "connecting" ? "Connecting to session..." : "Initializing voice call..."}
-          </Text>
-          <Text style={styles.loadingSubText}>
-            {connectionAttempts > 0
-              ? `Retry attempt ${connectionAttempts}/2`
-              : "Please ensure your internet connection is stable."}
-          </Text>
+          <Text style={styles.loadingText}>Connecting to session...</Text>
+          <Text style={styles.loadingSubText}>Please wait while we connect you.</Text>
           <Button
-            title="Cancel Connection"
-            onPress={() => navigation.replace("DashboardScreen")} // Changed router.replace
+            title="Cancel"
+            onPress={() => navigation.replace("index")}
             variant="outline"
             style={styles.cancelButton}
           />
@@ -203,19 +166,18 @@ export default function VoiceCall() {
     );
   }
 
-  
-  if (agoraError && connectionState === "failed" && connectionAttempts >= 2) {
+  // Error state
+  if (agoraError && connectionState === "failed") {
     return (
       <GradientContainer>
         <StatusBar />
         <View style={styles.errorContainer}>
           <Text style={styles.errorTitle}>Connection Failed</Text>
           <Text style={styles.errorMessage}>{agoraError}</Text>
-          <Text style={styles.errorSubMessage}>Failed to connect after {connectionAttempts} attempts.</Text>
-          <Button title="Try Again" onPress={handleRetryConnection} variant="primary" />
+          <Button title="Try Again" onPress={() => joinChannel()} variant="primary" />
           <Button
-            title="Go Back to Dashboard"
-            onPress={() => navigation.replace("DashboardScreen")} // Changed router.replace
+            title="Go Back"
+            onPress={() => navigation.replace("index")}
             variant="outline"
             style={{ marginTop: 10 }}
           />
@@ -248,7 +210,6 @@ export default function VoiceCall() {
           connectionState={connectionState}
         />
 
-        {/* Connection status indicator */}
         {connectionState !== "connected" && (
           <View style={styles.connectionIndicator}>
             <Text style={styles.connectionText}>
@@ -292,7 +253,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: 20,
-    backgroundColor: "rgba(0,0,0,0.5)",
   },
   errorTitle: {
     color: "red",
@@ -305,12 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginBottom: 10,
-  },
-  errorSubMessage: {
-    color: "rgba(255,255,255,0.7)",
-    fontSize: 14,
-    textAlign: "center",
-    marginBottom: 30,
   },
   connectionIndicator: {
     position: "absolute",
